@@ -3,11 +3,9 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 class feature_engineering:
-    def __init__(self, file_name, test_split = 0.5, random_state = 42) -> None:
+    def __init__(self, file_name) -> None:
         self.data = pd.read_csv(file_name)
         self.data.drop(columns= ['history_segment', 'conversion','spend'], inplace = True)
-        self.test_split = test_split
-        self.random_state = random_state
 
     def _treatment_category(
         self
@@ -70,18 +68,21 @@ class feature_engineering:
         '''
         self._treatment_category()
         self._get_features()
-        self._treatment_category()
-        X = self.data.drop(columns = ['visit'])
-        y = self.data['visit']
-        return train_test_split(X, y, test_size=self.test_split, random_state=self.random_state)
+        return self.data
+        
 
 class S_learner(feature_engineering):
     def __init__(self, file_name, test_split = 0.5, random_state = 42):
-        super().__init__(file_name, test_split, random_state)
-        self.X_train, self.X_test, self.y_train, self.y_test= self.features(self.data)
+        super().__init__(file_name)
+        self.X_per_segment = {}
+        self.features()
+        self.X = self.data.drop(columns = ['visit'])
+        self.y = self.data['visit']
+        # train_test_split(X, y, test_size=self.test_split, random_state=self.random_state)
+        # self.X_train, self.X_test, self.y_train, self.y_test= self.features(self.data)
 
     @staticmethod
-    def _s_learner_segment(data, option):
+    def s_learner_segment(data, option):
         cols = ['segment_0','segment_1','segment_2']
         for i, col in enumerate(cols):
             data[col] = 0
@@ -89,24 +90,15 @@ class S_learner(feature_engineering):
                 data[col] = 1
         return data
     
-    def _prepare_segments(self):
-        pass
+    def _prepare_segments(self):     
+        keys_segment = ['segment_0_1','segment_1_1','segment_2_1']
+        for j in range(3):
+            self.X_per_segment[keys_segment[j]] = self.s_learner_segment(self.data,j)### do I need to make a copy here?
 
 
 
-X_test_0 = X_test.copy()
-X_test_1 = X_test.copy()
-X_test_2 = X_test.copy()
 
-X_test_0['segment_0'] = 1
-X_test_0['segment_1'] = 0
-X_test_0['segment_2'] = 0
 
-X_test_1['segment_0'] = 0
-X_test_1['segment_1'] = 1
-X_test_1['segment_2'] = 0
 
-X_test_2['segment_0'] = 0
-X_test_2['segment_1'] = 0
-X_test_2['segment_2'] = 1
+
         
