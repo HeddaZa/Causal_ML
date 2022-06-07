@@ -1,0 +1,105 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+class feature_engineering:
+    def __init__(self, file_name) -> None:
+        self.data = pd.read_csv(file_name)
+
+def _treatment_category(
+    self
+    )-> None:
+    '''maps column 'visit's values 'No E-Mail', 'Womens E-Mail','Mens E-Mail' onto 0, 1, 2
+    '''
+    treatments = ['No E-Mail', 'Womens E-Mail', 'Mens E-Mail']
+    dictionary = dict(zip(treatments, list(range(3))))
+    self.data['visit'].map(dictionary)
+
+def _history_segment_optimise(
+    self
+    )-> None:
+    '''
+    combines 4) and 5) as well as 6) and 7) of the history column and maps onto numbers
+    '''
+    dictionary = {
+        '1) $0 - $100':0,
+        '2) $100 - $200':1,
+        '3) $200 - $350':2,
+        '4) $350 - $500':3,
+        '5) $500 - $750':3,
+        '6) $750 - $1,000':4,
+        '7) $1,000 +':4
+    }
+    self.data['history'].map(dictionary)
+
+def standardise(
+    self,
+    series:pd.Series
+    )->pd.Series:
+    '''
+    standardises column *1/2
+            
+    Parameters:
+    -----------
+    series: pandas series
+    
+    Returns:
+    --------
+    a series with standardises entries
+    '''
+    mean = np.mean(series)
+    std = np.std(series)
+    return (series-mean)/(std*2)
+
+def _get_features(
+    self,
+    df:pd.DataFrame, 
+    )->pd.DataFrame:
+    '''
+    takes features and one-hot-encodes them. if include_treatment is True, 
+    treatment column will be added to features
+    '''
+    features1 = ['mens', 'womens', 'newbie']
+    features2 = [  'zip_code', 'channel']
+    self.data[features1] = self.data[features1].astype('category')
+    self.data[features2] = self.data[features2].astype('category')
+    self.data[features2] =  pd.get_dummies(self.data[features2])
+    self.data['recency'] = standardise(self.data['recency'])
+    self.data['history'] = standardise(self.data['history'])
+
+def read_in_data(file_name,big_data,include_treatment = False):
+    '''
+    reads in data
+    
+    Parameters:
+    -----------
+    file_name: string
+        filename of file to be read in
+    big_data: bool
+         if true: read in big data set
+         else: small data set
+         
+    returns:
+        X: pd dataframe
+            dataframe with features
+        y: pd series
+            pd series with target
+    '''
+    if big_data:
+        Hillstrom_path = file_name
+        Hillstrom = pd.read_csv(Hillstrom_path)
+        Hillstrom['segment'] = treatment_category_big(Hillstrom['segment'])
+        y = Hillstrom['visit']
+        X = Hillstrom.drop(columns = ['visit'])
+    else:
+        Hillstrom_path = file_name
+        Hillstrom = pd.read_csv(Hillstrom_path)
+        Hillstrom.drop(columns= ['history_segment', 'conversion','spend'], inplace = True)
+        Hillstrom['segment'] = treatment_category(Hillstrom['segment'])
+
+        y = Hillstrom['visit']
+        X = Hillstrom.drop(columns = 'visit')
+
+        X = get_features(X, include_treatment = include_treatment)
+        X = pd.concat([X,Hillstrom['segment']],axis = 1)
+    return X,y
