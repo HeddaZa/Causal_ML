@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+#import model_metric as mm
 
 
 class feature_engineering:  # gross camel case
@@ -74,6 +75,7 @@ class S_learner(feature_engineering):  # unabhaengig von daten
         classifier,
         test_split=0.5,
         random_state=42,
+        **params
     ):
         super().__init__(file_name)
         self.test_split = test_split
@@ -81,6 +83,7 @@ class S_learner(feature_engineering):  # unabhaengig von daten
         self.X_train = self.y_train = None
         self.X_test = self.y_test = None
         self.classifier = classifier
+        self.params = params
         self.X_per_segment = {}
         self.proba_per_segment = {}
         self.features()
@@ -109,9 +112,10 @@ class S_learner(feature_engineering):  # unabhaengig von daten
 
     def _run_predictions(self):
         keys_segment = ["segment_0_1", "segment_1_1", "segment_2_1"]
-        clf = self.classifier
+        clf = self.classifier#(self.params)
         clf.fit(self.X_train, self.y_train)
         for j in range(3):
             self.proba_per_segment[keys_segment[j]] = clf.predict_proba(
-                self.X_per_segment[keys_segment[j]]
+                self.X_per_segment[keys_segment[j]][:,1]
             )
+   
