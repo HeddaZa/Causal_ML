@@ -39,8 +39,7 @@ def standardise(
     return (series-mean)/(std*2)
 
 def get_features(
-    df:pd.DataFrame, 
-    include_treatment:bool = False
+    df:pd.DataFrame
     )->pd.DataFrame:
     '''
     takes features and one-hot-encodes them. if include_treatment is True, 
@@ -60,8 +59,6 @@ def get_features(
     '''
     features1 = ['mens', 'womens', 'newbie']
     features2 = [  'zip_code', 'channel']
-    if include_treatment:
-        features2 = features2+['segment']
     df[features1+features2] = df[features1+features2].astype('category')
     dummy_features = pd.get_dummies(df[features2])
     df.drop(columns = features2, inplace = True)
@@ -71,8 +68,7 @@ def get_features(
     return df
 
 def feature_engineering(
-    df:pd.DataFrame, 
-    include_treatment:bool = False
+    df:pd.DataFrame
     )->pd.DataFrame:
     '''
     performs all necessary feature engineering tasks
@@ -95,16 +91,13 @@ def feature_engineering(
     df['history'] = standardise(df['history'])
 
     df['segment'] = treatment_category(df['segment'])
-    df = get_features(df, include_treatment=include_treatment)
+    df = get_features(df)
     
     return df
 
-    
-
-
-
-
-def read_in_data(file_name,include_treatment = False):
+def read_in_and_get_ready(
+    file_name:str
+    ) -> pd.DataFrame:
     '''
     reads in data
     
@@ -123,10 +116,10 @@ def read_in_data(file_name,include_treatment = False):
     Hillstrom_path = file_name
     Hillstrom = pd.read_csv(Hillstrom_path)
     
-    Hillstrom = feature_engineering(Hillstrom, include_treatment = include_treatment)
+    Hillstrom = feature_engineering(Hillstrom)
 
-    y = Hillstrom['visit']
-    X = Hillstrom.drop(columns = 'visit')
+    target = Hillstrom['visit']
+    features = Hillstrom.drop(columns = 'visit')
     
-    return X,y
+    return features, target
     
