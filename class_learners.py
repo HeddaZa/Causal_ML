@@ -7,86 +7,39 @@ from sklearn.model_selection import train_test_split
 class Learner:
     def __init__(
         self,
-        train, 
-        test,
+        features, 
+        treatment,
+        target,
         classifier,
         test_split=0.5,
         random_state=42
         ) -> None:
-        
-        self.train = train
-        self.test = test
+
         self.classifier = classifier
-        self.test_split = test_split
-        self.random_state = random_state
+        self.proba_per_segment = []
+        features_and_treatment = pd.concat([features,pd.DataFrame(treatment)], axis = 1)
+        self.number_of_treatments = treatment.nunique()
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            features_and_treatment,
+            target,
+            test_size=test_split,
+            random_state=random_state
+            )
+
         
         
-
-class feature_engineering:  # gross camel case
-    def __init__(self, file_name: str) -> None:
-        self.data = pd.read_csv(file_name)
-        self.data.drop(columns=["history_segment", "conversion", "spend"], inplace=True)
-
-    def _treatment_category(self) -> None:
-        """maps column 'visit's values 'No E-Mail', 'Womens E-Mail','Mens E-Mail' onto 0, 1, 2"""
-        treatments = list(
-            self.data["segment"].value_counts().index
-        )  # Womens, Mens, No E-Mail
-        dictionary = dict(zip(treatments, list(range(3))))
-        self.data["segment"] = self.data["segment"].map(dictionary)
-
-    @staticmethod
-    def standardise(series: pd.Series) -> pd.Series:
-        """
-        standardises column *1/2
-
-        Parameters:
-        -----------
-        series: pandas series
-
-        Returns:
-        --------
-        a series with standardises entries
-        """
-        mean = np.mean(series)
-        std = np.std(series)
-        return (series - mean) / (std * 2)
-
-    def _get_features(self):
-        """
-        takes features and one-hot-encodes them. if include_treatment is True,
-        treatment column will be added to features
-        """
-        features1 = ["mens", "womens", "newbie"]
-        features2 = ["zip_code", "channel", "segment"]
-        self.data[features1] = self.data[features1].astype("category")
-        self.data[features2] = self.data[features2].astype("category")
-        dummy_features2 = pd.get_dummies(self.data[features2])
-        self.data.drop(columns=features2, inplace=True)
-        self.data = pd.concat([self.data, dummy_features2], axis=1)
-        self.data["recency"] = self.standardise(self.data["recency"])
-        self.data["history"] = self.standardise(self.data["history"])
-
-    def features(self):
-        """
-        performs all necessary feature engineering procedures
-
-        Parameters:
-        -----------
-        self
-
-        returns:
-            X: pd dataframe
-                dataframe with features
-            y: pd series
-                pd series with target
-        """
-        self._treatment_category()
-        self._get_features()
-        return self.data
+    def _run_predictions(self, data):
+        clf = self.classifier
+        clf.fit(self.X_train, self.y_train)
+        for j in range(self.number_of_treatments):
+            self.proba_per_segment.append(clf.predict_proba(
+                data[j][:,1]
+            )
+            )
 
 
-class S_learner(feature_engineering):  # unabhaengig von daten
+
+class SLearner(Learner):  # unabhaengig von daten
     def __init__(
         self,
         file_name,
