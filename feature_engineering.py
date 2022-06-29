@@ -85,41 +85,13 @@ def feature_engineering(
     --------
     pandas DataFrame
     '''
-    df.drop(columns= ['history_segment', 'conversion','spend'], inplace = True)
+    df.drop(columns= ['history_segment'], inplace = True)
 
     df['recency'] = standardise(df['recency'])
     df['history'] = standardise(df['history'])
 
-    df['segment'] = treatment_category(df['segment'])
     df = get_features(df)
     
     return df
 
-def read_in_and_get_ready(
-    file_name:str
-    ) -> pd.DataFrame:
-    '''
-    reads in data
-    
-    Parameters:
-    -----------
-    file_name: string
-        filename of file to be read in
-         
-    returns:
-        X: pd dataframe
-            dataframe with features
-        y: pd series
-            pd series with target
-    '''
-    
-    Hillstrom_path = file_name
-    Hillstrom = pd.read_csv(Hillstrom_path)
-    
-    Hillstrom = feature_engineering(Hillstrom)
-
-    target = Hillstrom['visit']
-    features = Hillstrom.drop(columns = 'visit')
-    
-    return features, target
     
