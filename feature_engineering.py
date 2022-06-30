@@ -38,7 +38,7 @@ def standardise(
     std = np.std(series)
     return (series-mean)/(std*2)
 
-def get_features(
+def get_features2(
     df:pd.DataFrame
     )->pd.DataFrame:
     '''
@@ -66,6 +66,35 @@ def get_features(
 
    
     return df
+
+def get_features(
+    df:pd.DataFrame
+    )->pd.DataFrame:
+    '''
+    takes features and one-hot-encodes them. if include_treatment is True, 
+    treatment column will be added to features
+            
+    Parameters:
+    -----------
+    df: pandas DataFrame
+        
+    include_treatment: cool
+        default = False
+        if True: column 'segment' will be hot-encoded
+    
+    Returns:
+    --------
+    pandas DataFrame
+    '''
+    features = [  'zip_code', 'channel']
+    df[features] = df[features].astype('category')
+    dummy_features = pd.get_dummies(df[features])
+    df.drop(columns = features, inplace = True)
+    df = pd.concat([df,dummy_features], axis = 1)
+
+   
+    return df
+
 
 def feature_engineering(
     df:pd.DataFrame
