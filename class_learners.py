@@ -161,7 +161,7 @@ class TLearner:
 
         for j in range(number_of_unique_treatments):
             self.X_per_segment[names_sections[j]] = self.segment_split_T(self.X_train, self.y_train,j)
-            self.X_per_segment[names_sections[j]][0].drop(columns = [treatment_name], inplace = True)
+            #self.X_per_segment[names_sections[j]][0].drop(columns = [treatment_name], inplace = True)
        
         self.X_test.drop(columns = ['segment'], inplace = True)
 
@@ -190,7 +190,7 @@ class TLearner:
         self._run_all_predictions(classifier, **kwrds)
         return self.proba_per_segment   
 
-class CorrTLearner(TLearner):
+class CorrSTLearner:
     def __init__(
         self,
         features, 
@@ -199,7 +199,35 @@ class CorrTLearner(TLearner):
         test_split=0.5,
         random_state=42
     ):
-        super().__init__(features, treatment, target, test_split,random_state) 
+        treatment = treatment.astype('category')
+        dummy_treatment = pd.get_dummies(treatment)
+        features_and_treatment = pd.concat([features,dummy_treatment], axis = 1)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            features_and_treatment,
+            target,
+            test_size=test_split,
+            random_state=random_state
+            )
+        self.number_of_unique_treatments = treatment.nunique()
+        self.X_per_segment = None
+        self.dummy_name = dummy_treatment.columns
+
+    def _filter_and_split(self):
+        self.X_per_segment = {}
+        names_sections = ['train_0','train_1','train_2']
+
+        for j in range(self.number_of_unique_treatments):
+            self.X_per_segment[names_sections[j]] = self.X_train[self.dummy_name[j] == 1].copy()
+
+    def _split_test_set(self):
+        self.X_test[self.dummy_name] = 0
+        for name in self.dummy_name:
+            self.X_test[name] = 1 
+
+    def prepare_data(self):
+        self._filter_and_split()
+        self._split_test_set()
+        ### hier weiter machen
 
     def _run_base_model(self, **kwrds):
         model_base = xgb.XGBClassifier(**kwrds)
@@ -229,3 +257,20 @@ class CorrTLearner(TLearner):
         return self.proba_per_segment 
 
      
+
+
+# import feature_engineering as fe
+# import sklift.datasets.datasets as sdd
+# #from class_learners import SLearner, TLearner, CorrTLearner
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.ensemble import RandomForestClassifier
+
+# hillstrom = sdd.fetch_hillstrom(target_col='visit', data_home=None, dest_subdir=None, download_if_missing=True, return_X_y_t=False)
+# hillstrom_features = hillstrom['data']
+# hillstrom_target = hillstrom['target']
+# hillstrom_treatment = hillstrom['treatment']
+# hillstrom_features = fe.feature_engineering(hillstrom_features)
+# hillstrom_treatment = fe.treatment_category(hillstrom_treatment)
+
+# ct = CorrTLearner(hillstrom_features, hillstrom_treatment, hillstrom_target)
+# dict_proba_xgb_cT = ct.get_proba(seed=42, use_label_encoder=False, max_depth=1,eval_metric="logloss")
