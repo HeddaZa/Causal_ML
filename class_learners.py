@@ -199,7 +199,8 @@ class CorrSTLearner:
         test_split=0.5,
         random_state=42
     ):
-        treatment = treatment.astype('category')
+        self.number_of_unique_treatments = treatment.nunique()
+        treatment = pd.DataFrame(treatment).astype('category')
         dummy_treatment = pd.get_dummies(treatment)
         features_and_treatment = pd.concat([features,dummy_treatment], axis = 1)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -208,21 +209,33 @@ class CorrSTLearner:
             test_size=test_split,
             random_state=random_state
             )
-        self.number_of_unique_treatments = treatment.nunique()
         self.X_per_segment = None
+        self.X_test_per_segment = None
         self.dummy_name = dummy_treatment.columns
 
     def _filter_and_split(self):
         self.X_per_segment = {}
-        names_sections = ['train_0','train_1','train_2']
+        #names_sections = ['train_0','train_1','train_2']
 
-        for j in range(self.number_of_unique_treatments):
-            self.X_per_segment[names_sections[j]] = self.X_train[self.dummy_name[j] == 1].copy()
+        for name in self.dummy_name:
+            self.X_per_segment[name] = self.X_train[self.X_train[name] == 1].copy()
+
+    def s_learner_segment(self, data, option): #inherite from SLearner
+        cols = self.dummy_name
+        for i, col in enumerate(cols):
+            data[col] = 0
+            if i == option:
+                data[col] = 1
+        return data
+
 
     def _split_test_set(self):
+        self.X_test_per_segment = {}
         self.X_test[self.dummy_name] = 0
-        for name in self.dummy_name:
-            self.X_test[name] = 1 
+        for i,name in enumerate(self.dummy_name):
+            self.X_test_per_segment[name] = self.s_learner_segment(
+                self.X_test, i
+            ).copy()
 
     def prepare_data(self):
         self._filter_and_split()
@@ -256,21 +269,3 @@ class CorrSTLearner:
         self._run_all_predictions( **kwrds)
         return self.proba_per_segment 
 
-     
-
-
-# import feature_engineering as fe
-# import sklift.datasets.datasets as sdd
-# #from class_learners import SLearner, TLearner, CorrTLearner
-# from sklearn.linear_model import LogisticRegression
-# from sklearn.ensemble import RandomForestClassifier
-
-# hillstrom = sdd.fetch_hillstrom(target_col='visit', data_home=None, dest_subdir=None, download_if_missing=True, return_X_y_t=False)
-# hillstrom_features = hillstrom['data']
-# hillstrom_target = hillstrom['target']
-# hillstrom_treatment = hillstrom['treatment']
-# hillstrom_features = fe.feature_engineering(hillstrom_features)
-# hillstrom_treatment = fe.treatment_category(hillstrom_treatment)
-
-# ct = CorrTLearner(hillstrom_features, hillstrom_treatment, hillstrom_target)
-# dict_proba_xgb_cT = ct.get_proba(seed=42, use_label_encoder=False, max_depth=1,eval_metric="logloss")
