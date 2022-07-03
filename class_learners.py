@@ -210,15 +210,18 @@ class CorrSTLearner:
             random_state=random_state
             )
         self.X_per_segment = None
+        self.y_per_segment = None
         self.X_test_per_segment = None
         self.dummy_name = dummy_treatment.columns
 
     def _filter_and_split(self):
         self.X_per_segment = {}
+        self.y_per_segment = {}
         #names_sections = ['train_0','train_1','train_2']
 
         for name in self.dummy_name:
             self.X_per_segment[name] = self.X_train[self.X_train[name] == 1].copy()
+            self.y_per_segment[name] = self.y_train.loc[self.X_per_segment[name].index].copy()
 
     def s_learner_segment(self, data, option): #inherite from SLearner
         cols = self.dummy_name
@@ -255,13 +258,13 @@ class CorrSTLearner:
 
     def _run_all_predictions(self, **kwrds):
         self.proba_per_segment = {}
-        keys_segment = ['train_0','train_1','train_2']
+        keys_segment = self.dummy_name
 
         for key in keys_segment:
-            clf = self._run_predictions(self.X_per_segment[key][0], self.X_per_segment[key][1],**kwrds)
+            clf = self._run_predictions(self.X_per_segment[key], self.y_per_segment[key],**kwrds)
 
             self.proba_per_segment[key] = clf.predict_proba(
-                self.X_test
+                self.X_test_per_segment[key]
             )[:,1]
 
     def get_proba(self, **kwrds):
