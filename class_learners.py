@@ -11,40 +11,29 @@ class Learner:
         features, 
         treatment,
         target,
-        classifier,
         test_split=0.5,
         random_state=42
-        ) -> None:
-
-        self.classifier = classifier
-        self.proba_per_segment = []
-        features_and_treatment = pd.concat([features,pd.DataFrame(treatment)], axis = 1)
-        self.number_of_treatments = treatment.nunique()
+    ):
+        treatment = pd.DataFrame(treatment).astype('category')
+        dummy_treatment = pd.get_dummies(treatment)
+        self.dummy_name = dummy_treatment.columns
+        features_and_treatment = pd.concat([features, dummy_treatment,treatment],axis =1)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             features_and_treatment,
             target,
             test_size=test_split,
             random_state=random_state
             )
+        self.proba_per_segment = None
 
         
-    #define data better
-    # write better doc string    
-    def _run_predictions(self, data):
-        '''
-        data is list with datasets (= numbers of treatments)
-        '''
-        clf = self.classifier
-        clf.fit(self.X_train, self.y_train)
-        for j in range(self.number_of_treatments):
-            self.proba_per_segment.append(clf.predict_proba(
-                data[j][:,1]
-            )
-            )
+    # write better doc string   
+    # inheritances: S learner + T learner to corrST, learner class with metric to all others 
+    
 
 
 
-class SLearner:  
+class SLearner(Learner):  
     def __init__(
         self,
         features, 
@@ -53,18 +42,10 @@ class SLearner:
         test_split=0.5,
         random_state=42
     ):
-        treatment = pd.DataFrame(treatment).astype('category')
-        dummy_treatment = pd.get_dummies(treatment)
-        self.dummy_name = dummy_treatment.columns
-        features_and_treatment = pd.concat([features, dummy_treatment],axis =1)
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            features_and_treatment,
-            target,
-            test_size=test_split,
-            random_state=random_state
-            )
+        super().__init__(features, treatment, target, test_split, random_state)      
         self.X_test_per_segment = None 
-        self.proba_per_segment = None
+        self.X_train.drop(columns = [treatment.name], inplace = True)
+        self.X_test.drop(columns = [treatment.name], inplace = True)
     
     
     def s_learner_segment(self, data, option):
@@ -119,14 +100,16 @@ class TLearner:
             )
         self.proba_per_segment = None  
         self.X_per_segment = {}
-        number_of_unique_treatments = self.X_train[treatment.name].nunique()
+
+    def prepare_data_T(self):
+        number_of_unique_treatments = 3 ### NOT HARDCODE
         names_sections = ['train_0','train_1','train_2']
 
         for j in range(number_of_unique_treatments):
             self.X_per_segment[names_sections[j]] = self.segment_split_T(self.X_train, self.y_train,j)
-            self.X_per_segment[names_sections[j]][0].drop(columns = [treatment.name], inplace = True)
+            #self.X_per_segment[names_sections[j]][0].drop(columns = [treatment.name], inplace = True)
        
-        self.X_test.drop(columns = ['segment'], inplace = True)  
+        #self.X_test.drop(columns = ['segment'], inplace = True)  ### DROP AT FITTING STAGE
 
 
     @staticmethod
