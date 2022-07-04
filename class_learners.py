@@ -26,9 +26,25 @@ class Learner:
             )
         self.proba_per_segment = None
 
+    def s_learner_segment(self, data, option):
+        for i, col in enumerate(self.dummy_name):
+            data[col] = 0
+            if i == option:
+                data[col] = 1
+        return data
+
+    def _split_test_set(self):
+        self.X_test_per_segment = {}
+        self.X_test[self.dummy_name] = 0
+        for i,name in enumerate(self.dummy_name):
+            self.X_test_per_segment[name] = self.s_learner_segment(
+                self.X_test, i
+            ).copy()
+
         
     # write better doc string   
     # inheritances: S learner + T learner to corrST, learner class with metric to all others 
+    # function for drop segment
     
 
 
@@ -46,22 +62,6 @@ class SLearner(Learner):
         self.X_test_per_segment = None 
         self.X_train.drop(columns = [treatment.name], inplace = True)
         self.X_test.drop(columns = [treatment.name], inplace = True)
-    
-    
-    def s_learner_segment(self, data, option):
-        for i, col in enumerate(self.dummy_name):
-            data[col] = 0
-            if i == option:
-                data[col] = 1
-        return data
-
-
-    def _prepare_segments_test(self):
-        self.X_test_per_segment = {}
-        for j, name in enumerate(self.dummy_name):
-            self.X_test_per_segment[name] = self.s_learner_segment(
-                self.X_test, j
-            ).copy()
 
     def _run_predictions(self, classifier, **kwrds):
         self.proba_per_segment = {}
@@ -77,7 +77,7 @@ class SLearner(Learner):
             )[:,1]
 
     def get_proba(self,classifier, **kwrds):
-        self._prepare_segments_test()
+        self._split_test_set()
         self._run_predictions(classifier, **kwrds)
         return self.proba_per_segment
 
@@ -101,7 +101,6 @@ class TLearner(Learner):
 
         for j, name in enumerate(self.dummy_name):
             self.X_per_segment[name] = self.segment_split_T(self.X_train, self.y_train,j)
-            
 
     @staticmethod
     def segment_split_T(X_:pd.DataFrame,y_:pd.Series,segment:int):
@@ -168,50 +167,18 @@ class CorrSTLearner(Learner):
         self.X_train.drop(columns = [treatment.name], inplace = True)
         self.X_test.drop(columns = [treatment.name], inplace = True)
     
-        # self.number_of_unique_treatments = treatment.nunique()
-        # treatment = pd.DataFrame(treatment).astype('category')
-        # dummy_treatment = pd.get_dummies(treatment)
-        # features_and_treatment = pd.concat([features,dummy_treatment], axis = 1)
-        # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-        #     features_and_treatment,
-        #     target,
-        #     test_size=test_split,
-        #     random_state=random_state
-        #     )
-        # self.X_per_segment = None
-        # self.y_per_segment = None
-        # self.X_test_per_segment = None
-        # self.dummy_name = dummy_treatment.columns
 
     def _filter_and_split(self):
         self.X_per_segment = {}
         self.y_per_segment = {}
-        #names_sections = ['train_0','train_1','train_2']
 
         for name in self.dummy_name:
             self.X_per_segment[name] = self.X_train[self.X_train[name] == 1].copy()
             self.y_per_segment[name] = self.y_train.loc[self.X_per_segment[name].index].copy()
 
-    def s_learner_segment(self, data, option): #inherite from SLearner
-        for i, col in enumerate(self.dummy_name):
-            data[col] = 0
-            if i == option:
-                data[col] = 1
-        return data
-
-
-    def _split_test_set(self):
-        self.X_test_per_segment = {}
-        self.X_test[self.dummy_name] = 0
-        for i,name in enumerate(self.dummy_name):
-            self.X_test_per_segment[name] = self.s_learner_segment(
-                self.X_test, i
-            ).copy()
-
     def prepare_data(self):
         self._filter_and_split()
         self._split_test_set()
-        ### hier weiter machen
 
     def _run_base_model(self, **kwrds):
         model_base = xgb.XGBClassifier(**kwrds)
@@ -236,7 +203,6 @@ class CorrSTLearner(Learner):
             )[:,1]
 
     def get_proba(self, **kwrds):
-        #self._prepare_segments(treatment_name=treatment_name)
         self._run_all_predictions( **kwrds)
         return self.proba_per_segment 
 
