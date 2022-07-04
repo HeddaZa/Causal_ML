@@ -82,7 +82,7 @@ class SLearner(Learner):
         return self.proba_per_segment
 
 
-class TLearner:
+class TLearner(Learner):
     def __init__(
         self,
         features, 
@@ -91,26 +91,17 @@ class TLearner:
         test_split=0.5,
         random_state=42
     ):
-        features_and_treatment = pd.concat([features, treatment],axis =1)
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            features_and_treatment,
-            target,
-            test_size=test_split,
-            random_state=random_state
-            )
-        self.proba_per_segment = None  
+        super().__init__(features, treatment, target, test_split, random_state) 
+        self.X_train.drop(columns = self.dummy_name, inplace = True)
+        self.X_test.drop(columns = self.dummy_name, inplace = True)
+        self.X_per_segment = None
+
+    def _prepare_data_T(self):
         self.X_per_segment = {}
 
-    def prepare_data_T(self):
-        number_of_unique_treatments = 3 ### NOT HARDCODE
-        names_sections = ['train_0','train_1','train_2']
-
-        for j in range(number_of_unique_treatments):
-            self.X_per_segment[names_sections[j]] = self.segment_split_T(self.X_train, self.y_train,j)
-            #self.X_per_segment[names_sections[j]][0].drop(columns = [treatment.name], inplace = True)
-       
-        #self.X_test.drop(columns = ['segment'], inplace = True)  ### DROP AT FITTING STAGE
-
+        for j, name in enumerate(self.dummy_name):
+            self.X_per_segment[name] = self.segment_split_T(self.X_train, self.y_train,j)
+            
 
     @staticmethod
     def segment_split_T(X_:pd.DataFrame,y_:pd.Series,segment:int):
@@ -136,43 +127,32 @@ class TLearner:
         y_split = y_.loc[X_split.index].copy()
         return X_split, y_split
 
-    def _prepare_segments(self,treatment_name):
-        self.X_per_segment = {}
-        number_of_unique_treatments = self.X_train[treatment_name].nunique()
-        names_sections = ['train_0','train_1','train_2']
-
-        for j in range(number_of_unique_treatments):
-            self.X_per_segment[names_sections[j]] = self.segment_split_T(self.X_train, self.y_train,j)
-            #self.X_per_segment[names_sections[j]][0].drop(columns = [treatment_name], inplace = True)
-       
-        self.X_test.drop(columns = ['segment'], inplace = True)
-
-    def _run_all_predictions(self, classifier, **kwrds):
+    def _run_all_predictions(self, classifier, treatment_name, **kwrds):
         self.proba_per_segment = {}
-        keys_segment = ['train_0','train_1','train_2']
+        X_test_wo_tr = self.X_test.drop(columns = [treatment_name])
 
-        for key in keys_segment:
+        for key in self.dummy_name:
+            self.X_per_segment[key][0].drop(columns = [treatment_name], inplace = True)
             clf = self._run_predictions(classifier, self.X_per_segment[key][0], self.X_per_segment[key][1],**kwrds)
 
             self.proba_per_segment[key] = clf.predict_proba(
-                self.X_test
+                X_test_wo_tr
             )[:,1]
 
     def _run_predictions(self, classifier,X_train, y_train, **kwrds):
         clf = classifier(**kwrds)
         if classifier == xgb.XGBClassifier:
-            #eval_set = [(self.X_train,self.y_train),(self.X_test,self.y_test)]
             clf.fit(X_train,y_train, verbose  = False)
         else:
             clf.fit(X_train, y_train)
         return clf
         
-    def get_proba(self,classifier, **kwrds):
-        #self._prepare_segments(treatment_name=treatment_name)
-        self._run_all_predictions(classifier, **kwrds)
+    def get_proba(self,classifier, treatment_name,  **kwrds):
+        self._prepare_data_T()
+        self._run_all_predictions(classifier, treatment_name, **kwrds)
         return self.proba_per_segment   
 
-class CorrSTLearner:
+class CorrSTLearner(Learner):
     def __init__(
         self,
         features, 
@@ -181,20 +161,27 @@ class CorrSTLearner:
         test_split=0.5,
         random_state=42
     ):
-        self.number_of_unique_treatments = treatment.nunique()
-        treatment = pd.DataFrame(treatment).astype('category')
-        dummy_treatment = pd.get_dummies(treatment)
-        features_and_treatment = pd.concat([features,dummy_treatment], axis = 1)
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            features_and_treatment,
-            target,
-            test_size=test_split,
-            random_state=random_state
-            )
+        super().__init__(features, treatment, target, test_split, random_state)      
+        self.X_test_per_segment = None 
         self.X_per_segment = None
         self.y_per_segment = None
-        self.X_test_per_segment = None
-        self.dummy_name = dummy_treatment.columns
+        self.X_train.drop(columns = [treatment.name], inplace = True)
+        self.X_test.drop(columns = [treatment.name], inplace = True)
+    
+        # self.number_of_unique_treatments = treatment.nunique()
+        # treatment = pd.DataFrame(treatment).astype('category')
+        # dummy_treatment = pd.get_dummies(treatment)
+        # features_and_treatment = pd.concat([features,dummy_treatment], axis = 1)
+        # self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+        #     features_and_treatment,
+        #     target,
+        #     test_size=test_split,
+        #     random_state=random_state
+        #     )
+        # self.X_per_segment = None
+        # self.y_per_segment = None
+        # self.X_test_per_segment = None
+        # self.dummy_name = dummy_treatment.columns
 
     def _filter_and_split(self):
         self.X_per_segment = {}
@@ -206,8 +193,7 @@ class CorrSTLearner:
             self.y_per_segment[name] = self.y_train.loc[self.X_per_segment[name].index].copy()
 
     def s_learner_segment(self, data, option): #inherite from SLearner
-        cols = self.dummy_name
-        for i, col in enumerate(cols):
+        for i, col in enumerate(self.dummy_name):
             data[col] = 0
             if i == option:
                 data[col] = 1
