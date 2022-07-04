@@ -63,6 +63,29 @@ class SLearner:
             )
         self.X_per_segment = None
         self.proba_per_segment = None
+
+# def __init__(
+#         self,
+#         features, 
+#         treatment,
+#         target,
+#         test_split=0.5,
+#         random_state=42
+#     ):
+#         self.number_of_unique_treatments = treatment.nunique()
+#         treatment = pd.DataFrame(treatment).astype('category')
+#         dummy_treatment = pd.get_dummies(treatment)
+#         features_and_treatment = pd.concat([features,dummy_treatment], axis = 1)
+#         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+#             features_and_treatment,
+#             target,
+#             test_size=test_split,
+#             random_state=random_state
+#             )
+#         self.X_per_segment = None
+#         self.y_per_segment = None
+#         self.X_test_per_segment = None
+#         self.dummy_name = dummy_treatment.columns
     
     
     def s_learner_segment(self, data, option):
