@@ -95,6 +95,21 @@ class Learner:
                 self.X_test, i
             ).copy()
 
+    def get_best_treatment(
+        self
+        ) -> pd.Series:
+        '''
+        returns a dataframe with the treatment option that has the highest probability
+        
+        Returns:
+        --------
+        Series with one column with best treatment option and index of test set
+        '''
+        df_prob = pd.DataFrame(self.proba_per_segment)
+        prob_max_col = df_prob.idxmax(axis = 1)
+        prob_max_col.index = self.X_test.index
+        return prob_max_col
+
 class SLearner(Learner): 
     '''
     S-learner class
@@ -157,10 +172,14 @@ class SLearner(Learner):
             classifier to be used
         **kwrds: 
             arguments for classifier
+
+        Returns:
+        -----------
+        pd.Series with treatment with highest probability per row
         '''
         self._split_test_set()
         self._run_predictions(classifier, **kwrds)
-        return self.proba_per_segment
+        return self.get_best_treatment()      
 
 
 class TLearner(Learner):
@@ -283,10 +302,14 @@ class TLearner(Learner):
             name of the treatment column
         **kwrds: 
             arguments for classifier
+
+        Returns:
+        --------
+        Series with one column with best treatment option and index of test set
         '''
         self._prepare_data_T()
         self._run_all_predictions(classifier, treatment_name, **kwrds)
-        return self.proba_per_segment   
+        return self.get_best_treatment()    
 
 class CorrSTLearner(Learner):
     '''
@@ -328,21 +351,59 @@ class CorrSTLearner(Learner):
             self.y_per_segment[name] = self.y_train.loc[self.X_per_segment[name].index].copy()
 
     def prepare_data(self):
+        '''
+        prepares test and train set for correlated ST-Learner
+        '''
         self._filter_and_split()
         self._split_test_set()
 
     def _run_base_model(self, **kwrds):
+        '''
+        instantiates classifiert object and runs base model
+        
+        Parameters:
+        -----------
+        classifier: ml classifier
+            classifier to be used
+        **kwrds: 
+            arguments for classifier
+        '''
         model_base = xgb.XGBClassifier(**kwrds)
         model_base.fit(self.X_train,self.y_train, verbose = False)
         model_base.save_model('model_base.model')
 
     def _run_predictions(self,X_train, y_train, **kwrds):
+        '''
+        instantiate a classifier object. Fits model with boost from a base model. 
+        Computes proabilities on the test set
+        
+        Parameters:
+        -----------
+        X_train: pd.DataFrame
+            train feature data
+        y_train: pd.Series
+            train target data
+        **kwrds: 
+            arguments for classifier
+        '''
         self._run_base_model(**kwrds)
         clf = xgb.XGBClassifier(**kwrds)    
         clf.fit(X_train,y_train, verbose  = False, xgb_model='model_base.model')    
         return clf
 
     def get_proba(self, **kwrds):
+        '''
+        computes the best treatment using the correlated ST-Learner
+
+        Parameters:
+        --------------
+        **kwrds:
+            parameters for xbgoost classifier
+       
+        Returns:
+        --------
+        Series with best treatment option and index of test set
+        '''
         self.proba_per_segment = {}
         keys_segment = self.dummy_name
 
@@ -351,6 +412,6 @@ class CorrSTLearner(Learner):
             self.proba_per_segment[key] = clf.predict_proba(
                 self.X_test_per_segment[key]
             )[:,1]
-        return self.proba_per_segment
+        return self.get_best_treatment() 
 
 
