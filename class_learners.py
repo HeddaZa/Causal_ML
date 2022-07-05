@@ -1,11 +1,34 @@
-from random import random
+'''Classes for S-, T-, and correlated ST-Learner, as well as a "Learner" parent class'''
+
+#TO DO:
+    # write doc strings and comments  
+    # function for drop segment
+    # double check similarities of T and ST: simplify with Learner method if possible
+    # add try raise where appropriate
+
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
-#import model_metric as mm
 
 class Learner:
+    '''
+    General Learner class that is the parent class to all specific Learners in this file. It handles the initial data preparation 
+    (train, test split and treatment preparation). Methods that will be used in more than one of the specific Learners will be
+    hosted by the Learner class.
+
+    Parameters:
+    ---------------
+    features: pd.DataFrame
+        DataFrame with features (without treatment)
+    treatment: pd.Series
+        Series with the treatment values
+    target: pd.Series
+        Series with the target values
+    test_split: float, default 0.5
+        fraction for size of test set
+    random_state: int, default 42
+        root of randomisation of test/train split
+    '''
     def __init__(
         self,
         features, 
@@ -14,9 +37,12 @@ class Learner:
         test_split=0.5,
         random_state=42
     ):
+        #creating dummies for treatment
         treatment = pd.DataFrame(treatment).astype('category')
         dummy_treatment = pd.get_dummies(treatment)
         self.dummy_name = dummy_treatment.columns
+
+        # concating features, dummy treatments, and original treatments to be split into test and train sets
         features_and_treatment = pd.concat([features, dummy_treatment,treatment],axis =1)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             features_and_treatment,
@@ -24,9 +50,26 @@ class Learner:
             test_size=test_split,
             random_state=random_state
             )
+
         self.proba_per_segment = None
+        self.X_test_per_segment = None
 
     def s_learner_segment(self, data, option):
+        '''
+        setting all values of the DataFrame "data" to 0 but for column number "option", which is set to 1
+
+        Parameters:
+        -------------
+        data: pd.DataFrame
+            dummy DataFrame of treatment
+        option: int
+            the number of the column which will be set to 1
+
+        returns:
+        ------------
+        data: pd.DataFrame
+            dummy DataFrame with all values set to 0 but for column number "option", which is set to 1
+        '''
         for i, col in enumerate(self.dummy_name):
             data[col] = 0
             if i == option:
@@ -34,6 +77,16 @@ class Learner:
         return data
 
     def _split_test_set(self):
+        '''
+        setting all values of the DataFrame "data" to 0 but for column number "option", which is set to 1
+
+        Parameters:
+        -------------
+        data: pd.DataFrame
+            dummy DataFrame of treatment
+        option: int
+            the number of the column which will be set to 1
+        '''
         self.X_test_per_segment = {}
         self.X_test[self.dummy_name] = 0
         for i,name in enumerate(self.dummy_name):
@@ -41,15 +94,23 @@ class Learner:
                 self.X_test, i
             ).copy()
 
-        
-    # write better doc string   
-    # inheritances: S learner + T learner to corrST, learner class with metric to all others 
-    # function for drop segment
-    
+class SLearner(Learner): 
+    '''
+    S-learner class
 
-
-
-class SLearner(Learner):  
+    Parameters:
+    ---------------
+    features: pd.DataFrame
+        DataFrame with features (without treatment)
+    treatment: pd.Series
+        Series with the treatment values
+    target: pd.Series
+        Series with the target values
+    test_split: float, default 0.5
+        fraction for size of test set
+    random_state: int, default 42
+        root of randomisation of test/train split
+    ''' 
     def __init__(
         self,
         features, 
@@ -58,17 +119,26 @@ class SLearner(Learner):
         test_split=0.5,
         random_state=42
     ):
-        super().__init__(features, treatment, target, test_split, random_state)      
-        self.X_test_per_segment = None 
+        super().__init__(features, treatment, target, test_split, random_state)
+        #dropping the treatment columns (as the DataFrame contains the treatment as dummies as well)
         self.X_train.drop(columns = [treatment.name], inplace = True)
         self.X_test.drop(columns = [treatment.name], inplace = True)
 
     def _run_predictions(self, classifier, **kwrds):
+        '''
+        instantiate classifier object and computes probabilities for each test set
+        
+        Parameters:
+        -----------
+        classifier: ml classifier
+            classifier to be used
+        **kwrds: 
+            arguments for classifier
+        '''
         self.proba_per_segment = {}
         clf = classifier(**kwrds)
         if classifier == xgb.XGBClassifier:
-            eval_set = [(self.X_train,self.y_train),(self.X_test,self.y_test)]
-            clf.fit(self.X_train,self.y_train, eval_set = eval_set, verbose  = False)
+            clf.fit(self.X_train,self.y_train, verbose  = False)
         else:
             clf.fit(self.X_train, self.y_train)
         for  name in self.dummy_name:
@@ -77,12 +147,38 @@ class SLearner(Learner):
             )[:,1]
 
     def get_proba(self,classifier, **kwrds):
+        '''
+        performs all necessary methods to obtain probabilities
+        
+        Parameters:
+        -----------
+        classifier: ml classifier
+            classifier to be used
+        **kwrds: 
+            arguments for classifier
+        '''
         self._split_test_set()
         self._run_predictions(classifier, **kwrds)
         return self.proba_per_segment
 
 
 class TLearner(Learner):
+    '''
+    T-learner class
+
+    Parameters:
+    ---------------
+    features: pd.DataFrame
+        DataFrame with features (without treatment)
+    treatment: pd.Series
+        Series with the treatment values
+    target: pd.Series
+        Series with the target values
+    test_split: float, default 0.5
+        fraction for size of test set
+    random_state: int, default 42
+        root of randomisation of test/train split
+    ''' 
     def __init__(
         self,
         features, 
@@ -152,6 +248,22 @@ class TLearner(Learner):
         return self.proba_per_segment   
 
 class CorrSTLearner(Learner):
+    '''
+    correlated ST-learner class
+
+    Parameters:
+    ---------------
+    features: pd.DataFrame
+        DataFrame with features (without treatment)
+    treatment: pd.Series
+        Series with the treatment values
+    target: pd.Series
+        Series with the target values
+    test_split: float, default 0.5
+        fraction for size of test set
+    random_state: int, default 42
+        root of randomisation of test/train split
+    ''' 
     def __init__(
         self,
         features, 
@@ -191,7 +303,7 @@ class CorrSTLearner(Learner):
         clf.fit(X_train,y_train, verbose  = False, xgb_model='model_base.model')    
         return clf
 
-    def _run_all_predictions(self, **kwrds):
+    def get_proba(self, **kwrds):
         self.proba_per_segment = {}
         keys_segment = self.dummy_name
 
@@ -201,8 +313,6 @@ class CorrSTLearner(Learner):
             self.proba_per_segment[key] = clf.predict_proba(
                 self.X_test_per_segment[key]
             )[:,1]
+        return self.proba_per_segment
 
-    def get_proba(self, **kwrds):
-        self._run_all_predictions( **kwrds)
-        return self.proba_per_segment 
 
