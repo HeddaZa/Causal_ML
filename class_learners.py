@@ -53,6 +53,7 @@ class Learner:
 
         self.proba_per_segment = None
         self.X_test_per_segment = None
+        self.X_per_segment = None
 
     def s_learner_segment(self, data, option):
         '''
@@ -190,11 +191,13 @@ class TLearner(Learner):
         super().__init__(features, treatment, target, test_split, random_state) 
         self.X_train.drop(columns = self.dummy_name, inplace = True)
         self.X_test.drop(columns = self.dummy_name, inplace = True)
-        self.X_per_segment = None
+        
 
     def _prepare_data_T(self):
+        '''
+        filters the train data set for the different treatment options and creates a dictionairy for the new DataFrames
+        '''
         self.X_per_segment = {}
-
         for j, name in enumerate(self.dummy_name):
             self.X_per_segment[name] = self.segment_split_T(self.X_train, self.y_train,j)
 
@@ -223,6 +226,18 @@ class TLearner(Learner):
         return X_split, y_split
 
     def _run_all_predictions(self, classifier, treatment_name, **kwrds):
+        '''
+        instantiate a classifier object per train data set and computes proabilities on the test set
+        
+        Parameters:
+        -----------
+        classifier: ml classifier
+            classifier to be used
+        treatment_name: str
+            name of the treatment column
+        **kwrds: 
+            arguments for classifier
+        '''
         self.proba_per_segment = {}
         X_test_wo_tr = self.X_test.drop(columns = [treatment_name])
 
@@ -235,6 +250,20 @@ class TLearner(Learner):
             )[:,1]
 
     def _run_predictions(self, classifier,X_train, y_train, **kwrds):
+        '''
+        fits classifier object with train data
+        
+        Parameters:
+        -----------
+        classifier: ml classifier
+            classifier to be used
+        X_train: pd.DataFrame
+            train data set
+        y_train: pd.Series
+            target series associated with the train data set
+        **kwrds: 
+            arguments for classifier
+        '''
         clf = classifier(**kwrds)
         if classifier == xgb.XGBClassifier:
             clf.fit(X_train,y_train, verbose  = False)
@@ -243,6 +272,18 @@ class TLearner(Learner):
         return clf
         
     def get_proba(self,classifier, treatment_name,  **kwrds):
+        '''
+        performs all necessary methods to obtain probabilities
+        
+        Parameters:
+        -----------
+        classifier: ml classifier
+            classifier to be used
+        treatment_name: str
+            name of the treatment column
+        **kwrds: 
+            arguments for classifier
+        '''
         self._prepare_data_T()
         self._run_all_predictions(classifier, treatment_name, **kwrds)
         return self.proba_per_segment   
@@ -273,8 +314,6 @@ class CorrSTLearner(Learner):
         random_state=42
     ):
         super().__init__(features, treatment, target, test_split, random_state)      
-        self.X_test_per_segment = None 
-        self.X_per_segment = None
         self.y_per_segment = None
         self.X_train.drop(columns = [treatment.name], inplace = True)
         self.X_test.drop(columns = [treatment.name], inplace = True)
@@ -309,7 +348,6 @@ class CorrSTLearner(Learner):
 
         for key in keys_segment:
             clf = self._run_predictions(self.X_per_segment[key], self.y_per_segment[key],**kwrds)
-
             self.proba_per_segment[key] = clf.predict_proba(
                 self.X_test_per_segment[key]
             )[:,1]
