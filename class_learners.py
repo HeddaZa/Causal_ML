@@ -5,6 +5,7 @@
     # function for drop segment
     # double check similarities of T and ST: simplify with Learner method if possible
     # add try raise where appropriate
+    # rename methods if appropriate
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -51,6 +52,7 @@ class Learner:
             random_state=random_state
             )
 
+        self.test_treatment = self.X_test[treatment.columns[0]]
         self.proba_per_segment = None
         self.X_test_per_segment = None
         self.X_per_segment = None
@@ -95,6 +97,16 @@ class Learner:
                 self.X_test, i
             ).copy()
 
+    def map_dummy_name(self):
+        '''
+        creates dictionary that maps digits to dummy names
+        '''
+        temp_dict = {}
+        for j, name in enumerate(self.dummy_name):
+            temp_dict[name]=j
+
+        return temp_dict
+
     def get_best_treatment(
         self
         ) -> pd.Series:
@@ -108,7 +120,8 @@ class Learner:
         df_prob = pd.DataFrame(self.proba_per_segment)
         prob_max_col = df_prob.idxmax(axis = 1)
         prob_max_col.index = self.X_test.index
-        return prob_max_col
+        dummy_dict = self.map_dummy_name()
+        return prob_max_col.map(dummy_dict)
 
 class SLearner(Learner): 
     '''
@@ -343,6 +356,9 @@ class CorrSTLearner(Learner):
     
 
     def _filter_and_split(self):
+        '''
+        filters train data (both features and target) for treatment option and adds both the created DataFrames and Series to a dictionaries.
+        '''
         self.X_per_segment = {}
         self.y_per_segment = {}
 
