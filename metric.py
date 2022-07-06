@@ -3,6 +3,7 @@
 # TO DO:
     # repair ERUPT last method
 
+from zlib import DEF_BUF_SIZE
 import pandas as pd
 import numpy as np
 
@@ -10,7 +11,8 @@ class extendedERUPT:
     def __init__(
         self,
         best_treatment: pd.Series,
-        Treatment_test: pd.Series
+        Treatment_test: pd.Series,
+        target_test: pd.Series
     ):
         ''' 
         creates DataFrame with best_treatment,
@@ -26,6 +28,7 @@ class extendedERUPT:
         self.df_metric = pd.DataFrame({'best treatment':best_treatment})
         self.df_metric['test_set_treatment'] = Treatment_test
         self.df_metric['test_set_treatment'] = self.df_metric['test_set_treatment'].astype(int)
+        self.df_metric["target test"] = target_test
 
     def _add_random_treatment_col(
         self,
@@ -90,6 +93,22 @@ class extendedERUPT:
             raise ValueError('input not valid')
         return outliers
 
+    def _evaluate_random_distr(self):
+        erupt_bench_values = []
+        erupt_bench_sum_sucess = []
+        erupt_bench_sum_match = []
+        
+        for xx in range(500):
+            self._add_random_treatment_col(xx)
+            index_erupt_bench = self._get_common_treatment_index('random')
+            erupt_value_bench = self.df_metric["target test"].loc[index_erupt_bench].sum()/self.df_metric["target test"].loc[index_erupt_bench].shape[0]
+            
+            erupt_bench_values.append(erupt_value_bench)
+            erupt_bench_sum_sucess.append(self.df_metric["target test"].loc[index_erupt_bench].sum())
+            erupt_bench_sum_match.append(self.df_metric["target test"].loc[index_erupt_bench].shape[0])
+        
+        return np.mean(erupt_bench_values), np.mean(erupt_bench_sum_sucess), np.mean(erupt_bench_sum_match), erupt_bench_values
+
 
     def get_ERUPT_with_benchmark(
         self
@@ -118,36 +137,17 @@ class extendedERUPT:
             the erupt metric of the model, mean of outcome of test set, distribution of ERUPT of randomised model treatment
         '''
         index_erupt_test = self._get_common_treatment_index('best treatment')
-        # all treatment 2s need to be set to one before taking the sum
-        erupt_value_test = self.df_metric['test_set_treatment'].loc[index_erupt_test].sum()/self.df_metric['test_set_treatment'].loc[index_erupt_test].shape[0]
-    
-        erupt_bench_values = []
-        erupt_bench_sum_sucess = []
-        erupt_bench_sum_match = []
-        
-        for xx in range(500):
-            df_best_treatment = self._add_random_treatment_col(xx)
-            index_erupt_bench = self._get_common_treatment_index('random')
-            erupt_value_bench = self.df_metric['test_set_treatment'].loc[index_erupt_bench].sum()/self.df_metric['test_set_treatment'].loc[index_erupt_bench].shape[0]
-            
-            erupt_bench_values.append(erupt_value_bench)
-            erupt_bench_sum_sucess.append(self.df_metric['test_set_treatment'].loc[index_erupt_bench].sum())
-            erupt_bench_sum_match.append(self.df_metric['test_set_treatment'].loc[index_erupt_bench].shape[0])
-            
-        erupt_bench_values_mean = np.mean(erupt_bench_values)
-        erupt_bench_sum_sucess_mean = np.mean(erupt_bench_sum_sucess)
-        erupt_bench_sum_match_mean = np.mean(erupt_bench_sum_match)
+        erupt_value_test = self.df_metric["target test"].loc[index_erupt_test].sum()/self.df_metric["target test"].loc[index_erupt_test].shape[0]
+
+        erupt_bench_values_mean, erupt_bench_sum_sucess_mean, erupt_bench_sum_match_mean, erupt_bench_values = self._evaluate_random_distr()
         
         
-        erupt_value_bench_2 = self.df_metric['test_set_treatment'].mean()
+        erupt_value_bench_2 = self.df_metric["target test"].mean()
         
-        print(f'ERUPT model: {erupt_value_test:.4f}, sum of y: {self.df_metric["test_set_treatment"].loc[index_erupt_test].sum()}, number of rows: {self.df_metric["test_set_treatment"].loc[index_erupt_test].shape[0]}')
-        
-        print(f'ERUPT benchmark: {erupt_value_bench:.4f}, sum of y: {self.df_metric["test_set_treatment"].loc[index_erupt_bench].sum()}, number of rows: {self.df_metric["test_set_treatment"].loc[index_erupt_bench].shape[0]}')
-        print(f'Difference of ERUPT(model) and ERUPT(benchmark): {erupt_value_test - erupt_value_bench:.4f}')
+        print(f'ERUPT model: {erupt_value_test:.4f}, sum of y: {self.df_metric["target test"].loc[index_erupt_test].sum()}, number of rows: {self.df_metric["target test"].loc[index_erupt_test].shape[0]}')
         
         print(f'ERUPT benchmark: {erupt_bench_values_mean:.4f}, sum of y: {round(erupt_bench_sum_sucess_mean)}, number of rows: {round(erupt_bench_sum_match_mean)}')
-        print(f'Difference of ERUPT(model) and ERUPT(benchmark_2): {erupt_value_test - erupt_bench_values_mean:.4f}')
+        print(f'Difference of ERUPT(model) and ERUPT(benchmark): {erupt_value_test - erupt_bench_values_mean:.4f}')
         
         return erupt_value_test, erupt_value_bench_2, erupt_bench_values
     
