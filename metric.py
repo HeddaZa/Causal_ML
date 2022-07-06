@@ -1,9 +1,5 @@
 '''class for erupt metric'''
 
-# TO DO:
-    # repair ERUPT last method
-
-from zlib import DEF_BUF_SIZE
 import pandas as pd
 import numpy as np
 
