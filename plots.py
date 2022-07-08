@@ -74,3 +74,43 @@ def plot_continuous(data):
     axes[1].legend()
 
     plt.show()
+
+def plot_ERUPT(S_dict, T_dict, cST_dict):
+    
+    fig, ax = plt.subplots(1,3, sharey = True,figsize = (15,7))
+    fig.set_facecolor('snow')
+
+    ax[0].boxplot([S_dict['logreg'][2], S_dict['randfor'][2], S_dict['xgb'][2]], notch  = True)
+    ax[0].set_xticklabels(['log. reg.', 'rand. for.', 'xgb'])
+    ax[0].plot(1,S_dict['logreg'][0],'o',color = 'plum',label = 'ERUPT value models', mec = 'black', mew = 0.4, ms = 11) 
+    ax[0].plot(2,S_dict['randfor'][0],'o',color = 'plum', mec = 'black', mew = 0.4, ms = 11) 
+    ax[0].plot(3,S_dict['xgb'][0],'o',color = 'plum', mec = 'black', mew = 0.4, ms = 11)
+    ax[0].set_title('S-learner',fontsize = 20)
+    ax[0].axhline(S_dict['logreg'][1], c='mediumseagreen', label = 'mean of visits in test set', lw = 3)
+
+
+    ax[1].boxplot([T_dict['logreg'][2], T_dict['randfor'][2], T_dict['xgb'][2]], notch  = True)
+    ax[1].set_xticklabels(['log. reg.', 'rand. for.', 'xgb'])
+    ax[1].plot(1,T_dict['logreg'][0],'o',color = 'plum', mec = 'black', mew = 0.4, ms = 11) 
+    ax[1].plot(2,T_dict['randfor'][0],'o', color = 'plum', mec = 'black', mew = 0.4, ms = 11) 
+    ax[1].plot(3,T_dict['xgb'][0],'o', color = 'plum', mec = 'black', mew = 0.4, ms = 11)
+    ax[1].set_title('S-learner',fontsize = 20)
+    ax[1].axhline(T_dict['logreg'][1], c='mediumseagreen', lw = 3)
+
+    ax[1].set_title('T-learner',fontsize = 20)
+
+    ax[2].boxplot(cST_dict['xgb'][2], notch  = True)
+
+    ax[2].axhline(cST_dict['xgb'][1], c='mediumseagreen', lw = 3)
+    ax[2].plot(1,cST_dict['xgb'][0],'o',color = 'plum', mec = 'black', mew = 0.4, ms = 11)
+    ax[2].set_title('corr ST_Learner',fontsize = 20)
+    ax[2].set_xticklabels(['xgb' ])
+    fig.legend(loc='upper center', bbox_to_anchor=(1, 0.5),
+            ncol=1, fancybox=True, shadow=True)
+
+    plt.subplots_adjust( hspace=0.1)
+
+    fig.text(0.5, 0.07, ' ', ha='center', fontsize = 'x-large')
+    fig.text(0.07, 0.5, 'ERUPT values', va='center', rotation='vertical',fontsize = 'x-large')
+
+    plt.plot()
