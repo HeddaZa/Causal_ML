@@ -1,0 +1,26 @@
+certifi @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_83242e7e-f82d-4a71-8ef2-9d71d212d249gu_wxmeq/croots/recipe/certifi_1655968827803/work/certifi
+charset-normalizer==2.1.0
+cycler==0.11.0
+fonttools==4.34.4
+idna==3.3
+joblib==1.1.0
+kiwisolver==1.4.3
+matplotlib==3.5.2
+numpy==1.23.1
+packaging==21.3
+pandas==1.4.3
+Pillow==9.2.0
+pyparsing==3.0.9
+python-dateutil==2.8.2
+pytz==2022.1
+requests==2.28.1
+scikit-learn==1.1.1
+scikit-uplift==0.4.1
+scipy==1.8.1
+seaborn==0.11.2
+six==1.16.0
+sklearn==0.0
+threadpoolctl==3.1.0
+tqdm==4.64.0
+urllib3==1.26.10
+xgboost==1.6.1
