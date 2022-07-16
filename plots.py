@@ -42,9 +42,14 @@ def _cat_gender(data):
     data.loc[data["mens"] == 1, "gender"] = 2
     return data
 
+def map_visit(series):
+    map_visit = {0:'no visit', 1: 'visit'}
+    return series.map(map_visit)
+
 
 def plot_categorical(data):
     data = _cat_gender(data)
+    data['visit'] = map_visit(data['visit'])
     custom_params = {"axes.spines.right": False, "axes.spines.top": False}
     sns.set_theme(style="whitegrid", rc=custom_params)
     fig, axes = plt.subplots(2, 2, figsize=(15, 11))
@@ -85,11 +90,11 @@ def plot_categorical(data):
 
 
 def plot_continuous(data):
-    x = data[data["visit"] == 0]["recency"]
-    y = data[data["visit"] == 1]["recency"]
+    x = data[data["visit"] == 'no visit']["recency"]
+    y = data[data["visit"] == 'visit']["recency"]
 
-    xx = data[data["visit"] == 0]["history"]
-    yy = data[data["visit"] == 1]["history"]
+    xx = data[data["visit"] == 'no visit']["history"]
+    yy = data[data["visit"] == 'visit']["history"]
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     fig.set_facecolor("snow")
@@ -104,6 +109,7 @@ def plot_continuous(data):
     )
     axes[0].set_title("recency")
     axes[0].legend()
+    axes[0].set_ylabel('count')
     axes[1].hist(
         (xx, yy),
         histtype="bar",
@@ -113,6 +119,7 @@ def plot_continuous(data):
     )
     axes[1].set_title("history")
     axes[1].legend()
+    axes[1].set_ylabel('dollars spent')
 
     plt.show()
 
