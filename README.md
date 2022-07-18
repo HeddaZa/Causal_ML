@@ -1,6 +1,6 @@
 <h1>Causal Machine Learning</h1> 
 
-This is the summary of my project as a Faculty Data Science Fellow. The aim of this project is to find the best treatment option for indivual customers/patients/... given a randomised, controlled trail dataset with multiple treatment options.
+The aim of this project is to find the best treatment option for indivual customers/patients/... given a randomised, controlled trail dataset with multiple treatment options.
 
 I used the open source marketing data called [Hillstrom](https://blog.minethatdata.com/2008/03/minethatdata-e-mail-analytics-and-data.html). The data consists of a customer base of the last 12 month and whether they bought merchandise for women or men. Interventions are randomly distributed amongst the customer base (randomised control trial). There are three different interventions:
 
