@@ -20,7 +20,7 @@ I use three different learners to compute the best treatment option:
 
 The former two learners will be used with three different classifier:
 
-- linear regression 
+- logistic regression 
 - random forest
 -  xgboost
 

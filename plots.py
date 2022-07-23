@@ -211,7 +211,7 @@ def pie_plot_best_outcome(data,lst, name_all):
     for i,name in enumerate(lst):
         patches, _, _ = axes[i].pie(
             df[name].sort_index(),
-            colors=["thistle", "lightblue",'seagreen'],
+            colors=["thistle", "lightblue",'mediumseagreen'],
             shadow=True,
             explode=explode,
             autopct="%1.0f%%"
@@ -235,7 +235,7 @@ def pie_plot_xgb(data, name_all):
 
     patches, _, _ = axes.pie(
         df['xgb'].sort_index(),
-        colors=["thistle", "lightblue",'seagreen'],
+        colors=["thistle", "lightblue",'mediumseagreen'],
         shadow=True,
         explode=explode,
         autopct="%1.0f%%"
